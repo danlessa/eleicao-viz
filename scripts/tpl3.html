@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>__TITLE__ — por local de votação</title>
+<style>__LEAFLET_CSS__</style><script>__LEAFLET_JS__</script>
+<style>
+:root{--bg:#f6f6f4;--ink:#1a1a1a;--muted:#5a5a5a;--panel:#ffffffee;--border:#d8d8d4}
+@media (prefers-color-scheme: dark){:root{--bg:#141414;--ink:#eee;--muted:#aaa;--panel:#1e1e1eee;--border:#333}}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font:14px/1.4 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+#map{position:absolute;inset:0;background:var(--bg)}
+.panel{position:absolute;z-index:1000;background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:10px 12px;box-shadow:0 2px 8px #0002;max-width:min(360px,calc(100vw - 32px))}
+#title{top:12px;left:12px} #title h1{font-size:15px;margin:0 0 4px;font-weight:650} #title p{margin:0;color:var(--muted);font-size:12px}
+#legend{bottom:24px;left:12px} .bar{height:12px;border-radius:3px;background:linear-gradient(90deg,#009a7b,#7fbfae,#9a9a9a,#d4a06e,#be6517)}
+.ticks{display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-top:3px}
+#info{top:12px;right:12px;font-size:12.5px;min-width:250px;display:none} #info b{font-size:13px} #info .row{display:flex;justify-content:space-between;gap:12px;margin-top:2px}
+#src{bottom:24px;right:12px;font-size:11px;color:var(--muted);max-width:340px}
+.leaflet-container{font:inherit} label{display:block;margin-top:6px;font-size:12px} .sub{margin-left:18px}
+</style></head><body>
+<div id="map"></div>
+<div id="title" class="panel"><h1>__TITLE__</h1>
+<p>Resultado por local de votação (__NLOC__ locais em 39 municípios). Passe o mouse / toque para ver os números.</p>
+<div id="candctl" style="display:none;margin-top:6px;font-size:12px">visualizar: <select id="candview"><option value="all">ternário (3 candidatos)</option><option value="1">só o 1º colocado no município</option><option value="2">só o 2º colocado</option><option value="3">só o 3º colocado</option></select>
+<label class="sub" id="candsz" style="display:none"><input type="checkbox" id="candsize"> tamanho dos círculos ∝ votos do candidato (em vez do total do local)</label></div>
+<label><input type="radio" name="mode" value="vor"> Voronoi (área geográfica)</label>
+<label><input type="radio" name="mode" value="dor" checked> Círculos (área ∝ votos)</label>
+<div id="dorctl">
+<label class="sub">escala dos círculos: <b id="scaleval">0,6×</b><br><input type="range" id="scale" min="0.2" max="3" step="0.1" value="0.6" style="width:100%"></label>
+<label class="sub"><input type="checkbox" id="force" checked> não sobrepor (relaxação por colisão, Dorling) <span id="fstat" style="color:var(--muted)"></span></label>
+</div>
+<label>opacidade dos dados (círculos/polígonos): <b id="dov">85%</b><br><input type="range" id="dop" min="0" max="1" step="0.05" value="0.85" style="width:100%"></label>
+<div style="margin-top:8px;font-size:12px;color:var(--muted)">Mapas-base</div>
+<label style="margin-top:2px"><input type="checkbox" id="rms"> rmsampa-v2 (Pedal Hidrográfico) · opacidade <b id="rmsv">70%</b><br><input type="range" id="rmso" min="0" max="1" step="0.05" value="0.7" style="width:100%"></label>
+<label style="margin-top:2px"><input type="checkbox" id="tiles" checked> OpenStreetMap · opacidade <b id="osmv">100%</b><br><input type="range" id="osmo" min="0" max="1" step="0.05" value="1" style="width:100%"></label>
+<label><input type="checkbox" id="lines" checked> contornos municipais</label></div>
+<div id="info" class="panel"></div>
+<div id="legend" class="panel">__LEGEND__<div style="font-size:11px;color:var(--muted);margin-top:6px">__SUMMARY__</div></div>
+<div id="src" class="panel">__NOTE__</div>
+<script>
+const YEAR='__YEAR__', VOR=__VOR__, MUN=__MUN__, DOR=__DOR__, PROPS=__PROPS__;
+const map=L.map('map',{preferCanvas:true}).setView([-23.62,-46.55],10);
+const tiles=L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,opacity:1,attribution:'© OpenStreetMap'}).addTo(map);
+const rms=L.tileLayer('https://telhas.pedalhidrografi.co/rmsampa-v2/{z}/{x}/{y}.png',{maxZoom:19,maxNativeZoom:17,opacity:0.7,attribution:'rmsampa-v2 © Pedal Hidrográfico'});
+function bindBase(layer,cb,sl,lbl){document.getElementById(cb).onchange=e=>e.target.checked?layer.addTo(map):map.removeLayer(layer);const s=document.getElementById(sl);s.oninput=()=>{layer.setOpacity(+s.value);document.getElementById(lbl).textContent=Math.round(s.value*100)+'%'}}
+bindBase(rms,'rms','rmso','rmsv');bindBase(tiles,'tiles','osmo','osmv');
+const fmt=n=>Number(n).toLocaleString('pt-BR'); const pc=x=>Number(x).toFixed(1).replace('.',',')+'%'; const info=document.getElementById('info'); let sel=null;
+const tc=s=>String(s).toLowerCase().replace(/(^|\s)\S/g,c=>c.toUpperCase());
+function show(p){info.style.display='block';let body='';
+ if(p.nmA){body=`<div class="row" style="margin-top:6px"><span style="color:#b0142a;font-weight:600">${p.sgA} ${p.nrA} - ${tc(p.nmA)}${p.rA!=null?` <span style='font-weight:400;color:var(--muted)'>r=${p.rA>=0?'+':''}${p.rA}</span>`:''}</span><span>${fmt(p.va)} · <b>${pc(p.pct)}</b></span></div><div class="row"><span style="color:#2c3e9e;font-weight:600">${p.sgB} ${p.nrB} - ${tc(p.nmB)}${p.rB!=null?` <span style='font-weight:400;color:var(--muted)'>r=${p.rB>=0?'+':''}${p.rB}</span>`:''}</span><span>${fmt(p.vb)} · <b>${pc(100-p.pct)}</b></span></div>`}
+ else{body=`<div style="margin-top:6px;font-size:11px;color:var(--muted)">${p.triway?'Disputa de três (top-2 < 85% no município)':'Disputa bipolar (top-2 ≥ 85% no município)'}</div>
+ ${[[0,'#be6517','~Lula'],[1,'#009a7b','~Bolsonaro'],[2,'#876cca','outlier']].map(([k,c,tag])=>p['NM_VOTAVEL_'+k]?`<div class="row"><span style="color:${c};font-weight:600">${p['SG_'+k]} ${p['NR_VOTAVEL_'+k]} - ${tc(p['NM_VOTAVEL_'+k])} <span style="font-weight:400;color:var(--muted)">${tag}${p['r_lula22_'+k]!=null?' · r='+(p['r_lula22_'+k]>=0?'+':'')+Number(p['r_lula22_'+k]).toFixed(2):''}</span></span><span>${fmt(p['v'+k])} · <b>${pc(p['s'+k])}</b> <span style="color:var(--muted)">(${pc(100*p['v'+k]/Math.max(1,p.validos))} dos válidos)</span></span></div>`:'').join('')}`}
+ info.innerHTML=`<b>${p.nome}</b><div style="color:var(--muted)">${p.end||''}${p.bairro?' · '+p.bairro:''}</div><div style="color:var(--muted)">${p.mun} · zona ${p.zona} · local ${p.nr}${p.n_locais>1?' ('+p.n_locais+' locais no mesmo endereço)':''} · ${p.n_secoes} seções</div>${body}
+ <div class="row" style="color:var(--muted)"><span>Brancos / nulos</span><span>${fmt(p.branco)} / ${fmt(p.nulo)}</span></div><div class="row" style="color:var(--muted)"><span>Válidos</span><span>${fmt(p.validos)}</span></div>`}
+function hook(l,p,base){l.on('mouseover',()=>{show(p);l.setStyle({weight:2,color:'#111'});l.bringToFront()});l.on('mouseout',()=>{if(sel!==l){l.setStyle(base);info.style.display='none'}});l.on('click',()=>{if(sel&&sel!==l)sel.setStyle(sel._base);sel=l;show(p);l.setStyle({weight:2,color:'#111'})});l._base=base}
+let dataOp=0.85; const st=c=>({fillColor:c,fillOpacity:dataOp,color:c,opacity:dataOp,weight:0.6});
+const SEQ=[[238,243,251],[178,205,232],[98,155,203],[33,102,172],[8,48,107]];
+function seq(t){t=Math.max(0,Math.min(1,t));const x=t*(SEQ.length-1),i=Math.min(SEQ.length-2,Math.floor(x)),f=x-i;return `rgb(${SEQ[i].map((c,k)=>Math.round(c+(SEQ[i+1][k]-c)*f)).join(',')})`}
+let candView='all', candSize=false, seqMax=50;
+function poleOf(p,rank){for(let k=0;k<3;k++)if(p['rank_'+k]==rank)return k;return -1}
+function candShare(p){const k=poleOf(p,+candView);return k<0?null:100*p['v'+k]/Math.max(1,p.validos)}
+function colorFor(p){if(YEAR!=='2024'||candView==='all')return p.color;const s=candShare(p);return s==null?'rgba(0,0,0,0)':seq(s/seqMax)}
+function applyView(){const Ly=layers[YEAR];if(!Ly)return;
+ if(YEAR==='2024'&&candView!=='all'){const vals=Ly.circles.map(c=>candShare(c._p)).filter(x=>x!=null).sort((a,b)=>a-b);seqMax=Math.max(5,Math.ceil(vals[Math.floor(vals.length*0.95)]||50))}
+ Ly.vor.eachLayer(l=>{const p=l.feature.properties;l._base=st(colorFor(p));if(l!==sel)l.setStyle(l._base)});
+ Ly.circles.forEach(c=>{const p=c._p;c._base=st(colorFor(p));if(c!==sel)c.setStyle(c._base);let f=1;if(YEAR==='2024'&&candView!=='all'&&candSize){const k=poleOf(p,+candView);f=k<0?0:Math.sqrt(p['v'+k]/Math.max(1,p.va!==undefined?p.va+p.vb:(p.v0+p.v1+p.v2)))}c._f=f;c.setRadius(c._r0*scaleK*f)});
+ renderLegend();if(forceOn&&document.querySelector('input[name=mode]:checked').value==='dor')runForce()}
+function renderLegend(){const D=DATA[YEAR];let html=D.legend;
+ if(YEAR==='2024'&&candView!=='all'){html=`<div style="font-size:12px;margin-bottom:4px">% dos votos válidos do local — ${['','1º','2º','3º'][+candView]} colocado no município</div><div class="bar" style="width:260px;background:linear-gradient(90deg,rgb(238,243,251),rgb(178,205,232),rgb(98,155,203),rgb(33,102,172),rgb(8,48,107))"></div><div class="ticks" style="width:260px"><span>0%</span><span>≥${seqMax}% (p95)</span></div><div style="font-size:11px;color:var(--muted);margin-top:4px">Cada município tem seu próprio candidato nessa posição — veja no hover. Locais sem esse candidato ficam transparentes.</div>`}
+ document.getElementById('legend').innerHTML=html+`<div style="font-size:11px;color:var(--muted);margin-top:6px">${D.summary}</div>`}
+document.getElementById('candview').onchange=e=>{candView=e.target.value;document.getElementById('candsz').style.display=candView==='all'?'none':'block';applyView()};
+document.getElementById('candsize').onchange=e=>{candSize=e.target.checked;applyView()};
+const dop=document.getElementById('dop');dop.oninput=()=>{dataOp=+dop.value;document.getElementById('dov').textContent=Math.round(dataOp*100)+'%';Object.values(layers).forEach(Ly=>{Ly.vor.eachLayer(l=>{l._base=st(l.feature.properties.color);if(l!==sel)l.setStyle(l._base)});Ly.circles.forEach(c=>{c._base=st(c._p.color);if(c!==sel)c.setStyle(c._base)})})};
+const vor=L.geoJSON(VOR,{style:f=>st(f.properties.color),onEachFeature:(f,l)=>hook(l,f.properties,st(f.properties.color))}).addTo(map);
+const circles=DOR.map(([lat,lng,r],i)=>{const p=PROPS[i];const c=L.circle([lat,lng],{radius:r,...st(p.color)});c._r0=r;c._ll0=[lat,lng];c._p=p;hook(c,p,st(p.color));return c});const dor=L.layerGroup(circles);
+const mun=L.geoJSON(MUN,{style:{fill:false,color:'#222',weight:1.1,opacity:0.8},interactive:false}).addTo(map);
+// --- force layout (collision relaxation in projected metres) ---
+const crs=L.CRS.EPSG3857; const lat0=-23.6; const kM=1/Math.cos(lat0*Math.PI/180); // metres -> mercator units
+let scaleK=0.6, forceOn=true, animId=null;
+const P0=circles.map(c=>{const q=crs.project(L.latLng(c._ll0));return [q.x,q.y]});
+let P=P0.map(a=>a.slice());
+function relax(iters){const n=P.length; const R=circles.map(c=>c._r0*scaleK*(c._f==null?1:c._f)*kM+1e-3); const M=R.map(r=>r*r); const rmax=Math.max(...R); const cell=2*rmax;
+ for(let it=0;it<iters;it++){const grid=new Map();for(let i=0;i<n;i++){const k=((P[i][0]/cell)|0)+','+((P[i][1]/cell)|0);(grid.get(k)||grid.set(k,[]).get(k)).push(i)}
+  const dx=new Float64Array(n),dy=new Float64Array(n);let maxov=0;
+  for(let i=0;i<n;i++){const gx=(P[i][0]/cell)|0,gy=(P[i][1]/cell)|0;for(let a=-1;a<=1;a++)for(let b=-1;b<=1;b++){const L2=grid.get((gx+a)+','+(gy+b));if(!L2)continue;for(const j of L2){if(j<=i)continue;let ex=P[j][0]-P[i][0],ey=P[j][1]-P[i][1];let d=Math.hypot(ex,ey);if(d===0){d=1e-6;ex=1e-6}const ov=R[i]+R[j]-d;if(ov<=0)continue;maxov=Math.max(maxov,ov/Math.min(R[i],R[j]));const ux=ex/d,uy=ey/d,wi=M[j]/(M[i]+M[j]),wj=1-wi;dx[i]-=ux*ov*wi;dy[i]-=uy*ov*wi;dx[j]+=ux*ov*wj;dy[j]+=uy*ov*wj}}}
+  for(let i=0;i<n;i++){P[i][0]+=dx[i]*0.8;P[i][1]+=dy[i]*0.8}
+  if(maxov<0.03)return true}
+ return false}
+function applyPos(){circles.forEach((c,i)=>{const ll=crs.unproject(L.point(P[i][0],P[i][1]));c.setLatLng(ll)})}
+function runForce(){if(animId)cancelAnimationFrame(animId);P=P0.map(a=>a.slice());let it=0;const step=()=>{const done=relax(8);it+=8;applyPos();document.getElementById('fstat').textContent=done?'✓':`… ${it}`;if(!done&&it<1500)animId=requestAnimationFrame(step);else animId=null};animId=requestAnimationFrame(step)}
+function reset(){if(animId)cancelAnimationFrame(animId);animId=null;P=P0.map(a=>a.slice());applyPos();document.getElementById('fstat').textContent=''}
+const sc=document.getElementById('scale');sc.oninput=()=>{scaleK=+sc.value;document.getElementById('scaleval').textContent=scaleK.toFixed(1).replace('.',',')+'×';circles.forEach(c=>c.setRadius(c._r0*scaleK*(c._f==null?1:c._f)));if(forceOn)runForce()};
+document.getElementById('force').onchange=e=>{forceOn=e.target.checked;forceOn?runForce():reset()};
+document.querySelectorAll('input[name=mode]').forEach(e=>e.onchange=ev=>{const d=ev.target.value==='dor';document.getElementById('dorctl').style.display=d?'block':'none';if(d){map.removeLayer(vor);dor.addTo(map);mun.setStyle({color:'#999',weight:0.8})}else{map.removeLayer(dor);vor.addTo(map);mun.setStyle({color:'#222',weight:1.1})};mun.bringToFront()});
+document.getElementById('lines').onchange=e=>e.target.checked?mun.addTo(map):map.removeLayer(mun);
+map.fitBounds(mun.getBounds());
+</script></body></html>
