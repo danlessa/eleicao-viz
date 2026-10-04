@@ -1,17 +1,23 @@
 # CLAUDE.md
 
-Electoral maps of the São Paulo metro area (RMSP) by polling place: president 2022 2nd round, mayor 2024 1st and
-2nd rounds. The deliverable is the self-contained `rmsp_eleicoes_2022_2024_locais.html` (~13 MB, Leaflet and all data
-inlined), served via GitHub Pages (`index.html` redirects to it). See README.md (Portuguese) for color conventions,
+Electoral maps of the São Paulo metro area (RMSP) by polling place: president 2nd round 2006/2010/2014/2018/2022,
+mayor 2024 1st and 2nd rounds. The deliverable is the self-contained `rmsp_eleicoes_2022_2024_locais.html` (~28 MB,
+Leaflet and all data inlined; filename kept for link stability), served via GitHub Pages (`index.html` redirects to it). See README.md (Portuguese) for color conventions,
 data sources and the pipeline order.
 
 ## Working on this repo
-- The full pipeline can't be re-run from the repo: it needs raw TSE files and
+- Presidential 2006–2018 is reproducible from committed data plus the geocode file: `build_pres.py YEAR` then
+  `render_two.py YEAR`. TSE president-by-section data is in `votacao_secao_YEAR_BR.zip` (cdn.tse.jus.br/estatistica/
+  sead/odsele/votacao_secao/), not the `_SP` file; fdhidalgo release v0.16 has per-year coordinates keyed by
+  (ano, cd_localidade_tse, nr_zona, nr_locvot).
+- `combine.py` rebuilds the HTML byte-for-byte from `bundle_*.json` + `tpl3.html` + Leaflet 1.9.4 (`package/dist/`,
+  from unpkg). Missing bundles can be extracted from the current HTML (`const DATA={'2006':…}`, `const MUN=…`).
+- The rest of the pipeline (2022, 2024) can't be re-run from the repo: it needs raw TSE files and
   `geocoded_polling_stations.csv.gz` (54 MB, not committed), and its intermediates (`bundle_*.json`,
   `tri_agg_2024.csv`, `rmsp_locais_2024_*.csv`, `rmsp_voronoi*.gpkg`, …) aren't committed either. Scripts in `scripts/`
   assume those flat files sit in the cwd.
 - To change published colors or labels without the raw inputs, patch the artifacts directly (see
-  `scripts/apply_overrides.py`): the HTML embeds `const DATA={'2022':{…},'2024':{…},'2024_2T':{…}}`. Parse each bundle
+  `scripts/apply_overrides.py`): the HTML embeds `const DATA={'2006':{…},…,'2022':{…},'2024':{…},'2024_2T':{…}}`. Parse each bundle
   with `json.JSONDecoder().raw_decode` and re-dump with `ensure_ascii=False, separators=(',',':')`, which round-trips
   byte-for-byte. Each bundle has `props` (circles) and `vor.features[].properties` (Voronoi cells); patch both.
 - The PNGs can be regenerated with the original `render2.py 2024` / `render_two.py 2024_2T` in a scratch dir by

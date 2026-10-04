@@ -12,6 +12,13 @@ if Y=='2022':
     title='Eleição presidencial 2022 — 2º turno — RMSP'; out='rmsp_presidente_2022_2T'
     note='Fontes: TSE, votação por seção 2022 (dados abertos); coordenadas dos locais: TSE via fdhidalgo/geocode_br_polling_stations; limites IBGE. Locais no mesmo endereço foram agregados.'
     L,B_=v.va.sum(),v.vb.sum(); summary=f'RMSP: Lula {100*L/(L+B_):.1f}% · Bolsonaro {100*B_/(L+B_):.1f}% dos válidos'; lblA,lblB='Lula','Bolsonaro'
+elif Y in ('2006','2010','2014','2018'):  # from build_pres.py
+    v=gpd.read_file(f'rmsp_voronoi_{Y}.gpkg').to_crs(31983); p=gpd.read_file(f'rmsp_pontos_{Y}.gpkg').to_crs(31983)
+    SHORT={'LUIZ INACIO LULA DA SILVA':'Lula','GERALDO JOSÉ RODRIGUES ALCKMIN FILHO':'Alckmin','DILMA VANA ROUSSEFF':'Dilma','JOSÉ SERRA':'Serra','AÉCIO NEVES DA CUNHA':'Aécio','FERNANDO HADDAD':'Haddad','JAIR MESSIAS BOLSONARO':'Bolsonaro'}
+    lblA,lblB=SHORT[v.nmA.iloc[0]],SHORT[v.nmB.iloc[0]]
+    title=f'Eleição presidencial {Y} — 2º turno — RMSP'; out=f'rmsp_presidente_{Y}_2T'
+    note=f'Vermelho = {lblA} ({v.sgA.iloc[0]}), azul = {lblB} ({v.sgB.iloc[0]}). Fontes: TSE, votação por seção {Y} (dados abertos, arquivo BR); coordenadas dos locais: fdhidalgo/geocode_br_polling_stations ({Y}); limites IBGE. Locais no mesmo endereço foram agregados.'
+    L,B_=v.va.sum(),v.vb.sum(); summary=f'RMSP: {lblA} {100*L/(L+B_):.1f}% · {lblB} {100*B_/(L+B_):.1f}% dos válidos'
 else:
     v=gpd.read_file('rmsp_voronoi_2024_2t.gpkg').to_crs(31983); p=gpd.read_file('rmsp_pontos_2024_2t.gpkg').to_crs(31983)
     title='Eleições municipais 2024 — 2º turno, prefeito — RMSP'; out='rmsp_prefeito_2024_2T'
@@ -31,7 +38,7 @@ for _,r in mu.iterrows(): ax.annotate(r['name'],(r.c.x,r.c.y),ha='center',va='ce
 sm=plt.cm.ScalarMappable(cmap=cmap,norm=norm); sm.set_array([])
 cb=fig.colorbar(sm,ax=ax,orientation='horizontal',fraction=0.035,pad=0.02,aspect=45,ticks=[lo,50,hi]); cb.set_label(f'% de votos válidos — {lblA} (vermelho) vs. {lblB} (azul); escala ajustada ao percentil 95 dos locais',fontsize=10)
 cb.ax.set_xticklabels([f'≤{lo}% {lblA}\n(≥{hi}% {lblB})','50/50',f'≥{hi}% {lblA}\n(≤{lo}% {lblB})'],fontsize=8)
-if Y!='2022':
+if Y=='2024_2T':
     info=v.drop_duplicates('municipio').sort_values('municipio')
     tc=lambda s:' '.join(str(s).title().split()[:2])
     fig.text(0.01,-0.03,'\n'.join(f"{r.municipio}: {r.sgA} {tc(r.nmA)} (vermelho) vs. {r.sgB} {tc(r.nmB)} (azul)" for r in info.itertuples()),fontsize=7.5,color='#222',va='top')
@@ -52,7 +59,7 @@ def rnd(o):
 gj=rnd(json.loads(vs[cols+['geometry']].to_json(drop_id=True))); props=json.loads(p.rename(columns=ren)[cols].to_json(orient='records'))
 mun4=mu.drop(columns='c').copy(); mun4['geometry']=mun4.geometry.simplify(15); gj_m=rnd(json.loads(mun4.to_crs(4326)[['name','geometry']].to_json(drop_id=True)))
 legend=f'<div style="font-size:12px;margin-bottom:4px"><span style="color:{RED};font-weight:600">{lblA}</span> vs. <span style="color:{BLUE};font-weight:600">{lblB}</span></div><div class="bar" style="width:260px;background:linear-gradient(90deg,{BLUE},#7f95d6,#e4e4e4,#e69a86,{RED})"></div><div class="ticks" style="width:260px"><span>≥{hi}% {lblB}</span><span>50/50</span><span>≥{hi}% {lblA}</span></div>'
-if Y!='2022':
+if Y=='2024_2T':
     info=v.drop_duplicates('municipio').sort_values('municipio'); tc=lambda s:' '.join(str(s).title().split()[:2])
     legend+='<div style="font-size:11px;margin-top:6px;line-height:1.35">'+'<br>'.join(f"<b>{r.municipio}</b>: <span style='color:{RED}'>{r.sgA} {tc(r.nmA)}</span> (r={r.rA:+.2f}) vs. <span style='color:{BLUE}'>{r.sgB} {tc(r.nmB)}</span> (r={r.rB:+.2f})" for r in info.itertuples())+'</div>'
 json.dump(dict(title=title,vor=gj,mun=gj_m,dor=dor,props=props,nloc=f'{len(v):,}'.replace(',','.'),summary=summary,note=note,legend=legend),open(f'bundle_{Y}.json','w'),ensure_ascii=False,separators=(',',':')); print('done',Y)
