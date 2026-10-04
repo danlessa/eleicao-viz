@@ -15,7 +15,7 @@ if Y=='2022':
 else:
     v=gpd.read_file('rmsp_voronoi_2024_2t.gpkg').to_crs(31983); p=gpd.read_file('rmsp_pontos_2024_2t.gpkg').to_crs(31983)
     title='Eleições municipais 2024 — 2º turno, prefeito — RMSP'; out='rmsp_prefeito_2024_2T'
-    note='Sete municípios tiveram 2º turno (São Paulo, Guarulhos, São Bernardo, Diadema, Mauá, Barueri, Taboão da Serra). Vermelho = candidato cuja votação por local se correlaciona positivamente com a de Lula em 2022, azul = o outro (r no hover); cada município tem sua própria dupla (veja no hover). Fontes: TSE, votação por seção 2024; coordenadas: TSE via fdhidalgo/geocode_br_polling_stations; limites IBGE.'
+    note='Sete municípios tiveram 2º turno (São Paulo, Guarulhos, São Bernardo, Diadema, Mauá, Barueri, Taboão da Serra). Vermelho = candidato cuja votação por local se correlaciona positivamente com a de Lula em 2022, azul = o outro (r no hover); cada município tem sua própria dupla (veja no hover). Ajustes manuais: Mauá PT vermelho; Taboão da Serra UNIÃO azul (~Bolsonaro). Fontes: TSE, votação por seção 2024; coordenadas: TSE via fdhidalgo/geocode_br_polling_stations; limites IBGE.'
     summary='7 municípios com 2º turno · '+str(len(v))+' locais'; lblA,lblB='cand. vermelho','cand. azul'
 for d in (v,p): d['w']=d.va+d.vb; d['pct']=d.pct.round(1)
 # data-driven symmetric range: 95th percentile of |pct-50|, at least ±10
@@ -35,7 +35,7 @@ if Y!='2022':
     info=v.drop_duplicates('municipio').sort_values('municipio')
     tc=lambda s:' '.join(str(s).title().split()[:2])
     fig.text(0.01,-0.03,'\n'.join(f"{r.municipio}: {r.sgA} {tc(r.nmA)} (vermelho) vs. {r.sgB} {tc(r.nmB)} (azul)" for r in info.itertuples()),fontsize=7.5,color='#222',va='top')
-    fig.text(0.01,-0.03-0.012*len(info)-0.01,note,fontsize=7.5,color='#444',va='top')
+    fig.text(0.01,-0.03-0.012*len(info)-0.01,note.replace(' Ajustes manuais','\nAjustes manuais'),fontsize=7.5,color='#444',va='top')
 else: fig.text(0.01,-0.03,summary+'\n'+note,fontsize=7.5,color='#444',va='top')
 fig.savefig(out+'_locais.png',dpi=150,bbox_inches='tight',facecolor='white'); plt.close(fig)
 # bundle

@@ -25,7 +25,7 @@ else:
     for d in (v,p):
         for k in range(3): d[f'SG_{k}']=d[f'NR_VOTAVEL_{k}'].map(lambda x: PARTY.get(int(x),'?') if pd.notna(x) else None).astype(object).where(d[f'NR_VOTAVEL_{k}'].notna(),None)
     title='Eleições municipais 2024 — 1º turno, prefeito — RMSP'; out='rmsp_prefeito_2024_1T'; A,B='esquerda','direita'
-    note='Polos definidos empiricamente por município: correlação (Pearson, entre locais de votação) entre a fração de votos de cada candidato e a fração de Lula no 2º turno de 2022 no mesmo local. Laranja = candidato mais correlacionado com Lula, verde-azulado = mais correlacionado com Bolsonaro (r mais negativo), roxo = o intermediário (mais próximo de não-correlacionado). O r de cada candidato aparece no hover. Onde os dois primeiros somam ≥85% dos válidos a escala é bipolar (cinza = empate); nos demais, mistura ternária dos três em OKLab (cinza = três iguais). Fontes: TSE, votação por seção 2024; coordenadas: TSE via fdhidalgo/geocode_br_polling_stations; limites IBGE.'
+    note='Polos definidos empiricamente por município: correlação (Pearson, entre locais de votação) entre a fração de votos de cada candidato e a fração de Lula no 2º turno de 2022 no mesmo local. Laranja = candidato mais correlacionado com Lula, verde-azulado = mais correlacionado com Bolsonaro (r mais negativo), roxo = o intermediário (mais próximo de não-correlacionado). O r de cada candidato aparece no hover. Onde os dois primeiros somam ≥85% dos válidos a escala é bipolar (cinza = empate); nos demais, mistura ternária dos três em OKLab (cinza = três iguais). Ajustes manuais (onde a correlação rotula mal o candidato): São Caetano PODE outlier, PL ~Bolsonaro; Itapevi PSB ~Lula, PODE outlier; Taboão da Serra PSDB ~Lula, PODE outlier, UNIÃO ~Bolsonaro; Diadema MDB outlier. Fontes: TSE, votação por seção 2024; coordenadas: TSE via fdhidalgo/geocode_br_polling_stations; limites IBGE.'
     summary='39 disputas municipais; '+str(int(tri.drop_duplicates("cod_localidade_ibge").triway.sum()))+' municípios com disputa de 3 (top-2 < 85%)'
     legend_html='<div style="font-size:12px;margin-bottom:4px"><span style="color:#be6517;font-weight:600">correlato a Lula 2022</span> · <span style="color:#009a7b;font-weight:600">correlato a Bolsonaro 2022</span> · <span style="color:#876cca;font-weight:600">outlier (menos correlato)</span></div><svg width="150" height="130" viewBox="0 0 150 130">__TRI__</svg><div style="font-size:11px;color:var(--muted)">Cada município tem seus próprios candidatos — veja no hover.</div>'
     # ternary triangle preview via python oklab
@@ -62,7 +62,7 @@ def deco(fig,ax,sub):
         fig.text(0.10,0.265,'\n'.join(lines[:half]),fontsize=6.5,va='top',color='#222')
         fig.text(0.52,0.265,'\n'.join(lines[half:]),fontsize=6.5,va='top',color='#222')
         fig.text(0.10,0.285,'Legenda por município — laranja = esquerda, verde-azulado = direita, roxo = outlier; "(3)" = disputa de três (top-2 < 85%), cor = mistura ternária.',fontsize=7.5,color='#444',va='top')
-    fig.text(0.01,-0.03,summary+'\n'+note,fontsize=7.5,color='#444',va='bottom')
+    fig.text(0.01,-0.03,summary+'\n'+note.replace(' Ajustes manuais','\nAjustes manuais'),fontsize=7.5,color='#444',va='bottom')
 fig,ax=plt.subplots(figsize=(16,15 if Y=='2024' else 12.5),dpi=150); fig.patch.set_facecolor('white')
 v.plot(color=v.color,ax=ax,linewidth=0.25,edgecolor='face'); mu.boundary.plot(ax=ax,linewidth=0.6,color='#333')
 if Y=='2024': ax.set_position([0.03,0.30,0.94,0.66])

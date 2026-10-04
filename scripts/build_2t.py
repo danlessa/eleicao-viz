@@ -1,5 +1,6 @@
 import pandas as pd, geopandas as gpd, numpy as np
 from shapely.ops import voronoi_diagram, unary_union
+from overrides import sort_key_2t
 exec(open('agg.py').read().split('geo = pd.read_csv')[0])
 PARTY={10:'REPUBLICANOS',11:'PP',12:'PDT',13:'PT',15:'MDB',16:'PSTU',18:'REDE',20:'PODE',21:'PCB',22:'PL',23:'CIDADANIA',25:'PRD',27:'DC',28:'PRTB',29:'PCO',30:'NOVO',33:'MOBILIZA',35:'PMB',36:'AGIR',40:'PSB',43:'PV',44:'UNIÃO',45:'PSDB',50:'PSOL',55:'PSD',65:'PCdoB',70:'AVANTE',77:'SOLIDARIEDADE',80:'UP'}
 LEFT={13,50,65,12,40,18,43,16,21,29,80}; RIGHT={22,30,28,10,11,44}
@@ -7,10 +8,10 @@ ct2=pd.read_csv('corr_2024_2t.csv')[['CD_MUNICIPIO','NR_VOTAVEL','r_lula22']]
 v=pd.read_csv('prefeito_2t_rmsp_2024.csv.gz',sep=';',encoding='latin1')
 key=['CD_MUNICIPIO','NM_MUNICIPIO','NR_ZONA','NR_LOCAL_VOTACAO','NM_LOCAL_VOTACAO','DS_LOCAL_VOTACAO_ENDERECO']
 c=v[~v.NR_VOTAVEL.isin([95,96])].groupby(['CD_MUNICIPIO','NR_VOTAVEL','NM_VOTAVEL']).QT_VOTOS.sum().reset_index().sort_values(['CD_MUNICIPIO','QT_VOTOS'],ascending=[True,False])
-# pole A (red) = more progressive of the pair; tie -> municipal winner
+# pole A (red) = more progressive of the pair (manual overrides in overrides.py); tie -> municipal winner
 rows=[]
 for m,g in c.groupby('CD_MUNICIPIO'):
-    g=g.merge(ct2,on=['CD_MUNICIPIO','NR_VOTAVEL'],how='left').fillna({'r_lula22':0}); g=g.sort_values(['r_lula22','QT_VOTOS'],ascending=[False,False]); a,b=g.iloc[0],g.iloc[1]
+    g=g.merge(ct2,on=['CD_MUNICIPIO','NR_VOTAVEL'],how='left').fillna({'r_lula22':0}); g['k']=[sort_key_2t(m,nr,r) for nr,r in zip(g.NR_VOTAVEL,g.r_lula22)]; g=g.sort_values(['k','QT_VOTOS'],ascending=[False,False]); a,b=g.iloc[0],g.iloc[1]
     rows.append(dict(CD_MUNICIPIO=m,nrA=a.NR_VOTAVEL,nmA=a.NM_VOTAVEL,sgA=PARTY.get(a.NR_VOTAVEL,'?'),nrB=b.NR_VOTAVEL,nmB=b.NM_VOTAVEL,sgB=PARTY.get(b.NR_VOTAVEL,'?'),rA=round(a.r_lula22,2),rB=round(b.r_lula22,2),shareA=a.QT_VOTOS/(a.QT_VOTOS+b.QT_VOTOS)))
 info=pd.DataFrame(rows); print(info[['nmA','sgA','rA','nmB','sgB','rB','shareA']].round(3).to_string())
 v=v.merge(info[['CD_MUNICIPIO','nrA','nrB']],on='CD_MUNICIPIO')

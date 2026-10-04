@@ -1,4 +1,5 @@
 import pandas as pd, numpy as np
+from overrides import assign_poles
 exec(open('agg.py').read().split('geo = pd.read_csv')[0])
 exec(open('tri2024.py').read().split('# OKLab helpers')[1].split('# endpoints')[0])
 LEFT={13,50,65,12,40,18,43,16,21,29,80}; RIGHT={22,30,28,10,11,44}
@@ -18,8 +19,8 @@ ct=pd.read_csv('corr_2024_1t.csv')[['CD_MUNICIPIO','NR_VOTAVEL','r_lula22']]
 top=top.merge(ct,on=['CD_MUNICIPIO','NR_VOTAVEL'],how='left'); top['r_lula22']=top.r_lula22.fillna(0)
 rows=[]
 for m,g in top.groupby('CD_MUNICIPIO'):
-    g=g.sort_values('r_lula22',ascending=False); n=len(g)
-    poles=[0,2,1] if n==3 else [0,1]   # most Lula-correlated -> orange(0); most Bolsonaro-correlated -> teal(1); middle -> purple(2)
+    g=g.sort_values('r_lula22',ascending=False)
+    poles=assign_poles(m,list(g.NR_VOTAVEL))   # most Lula-correlated -> orange(0); most Bolsonaro-correlated -> teal(1); middle -> purple(2); see overrides.py
     for r,p in zip(g.itertuples(),poles): rows.append((m,r.NR_VOTAVEL,p))
 pole=pd.DataFrame(rows,columns=['CD_MUNICIPIO','NR_VOTAVEL','pole']); top=top.merge(pole,on=['CD_MUNICIPIO','NR_VOTAVEL'])
 info=top.pivot(index='CD_MUNICIPIO',columns='pole',values=['NR_VOTAVEL','NM_VOTAVEL','share','r_lula22']); info.columns=[f'{a}_{b}' for a,b in info.columns]

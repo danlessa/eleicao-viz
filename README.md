@@ -13,6 +13,9 @@ prefeito 2024 1º turno, prefeito 2024 2º turno (7 municípios). Modos: Voronoi
   válidos, escala bipolar entre os dois polos presentes; senão mistura ternária em OKLab (matiz = direção,
   croma = dominância do líder, saturando em 60%; cinza = empate). Há ainda a visualização por candidato
   (1º/2º/3º colocado no município) em escala sequencial única, com opção de círculos ∝ votos do candidato.
+- **Ajustes manuais** (`scripts/overrides.py`) — onde a correlação rotula mal um candidato, o polo é fixado à mão:
+  São Caetano (PODE outlier, PL ~Bolsonaro), Itapevi (PSB ~Lula, PODE outlier), Taboão da Serra (PSDB ~Lula,
+  PODE outlier, UNIÃO ~Bolsonaro), Diadema (MDB outlier), Mauá (PT ~Lula). No 2T: Mauá PT vermelho, Taboão UNIÃO azul.
 
 ## Dados
 - `data/pres2t_sp.csv.gz` — TSE votação por seção 2022, SP, presidente 2º turno
@@ -31,5 +34,7 @@ prefeito 2024 1º turno, prefeito 2024 2º turno (7 municípios). Modos: Voronoi
 4. `tri2024b.py` — polos e cores ternárias do 1T; `build_2t.py` — dados/Voronoi/polos do 2T
 5. `render2.py 2024`, `render_two.py 2022|2024_2T` — PNGs estáticos + bundles JSON
 6. `combine.py` — monta o HTML único a partir de `tpl3.html` e dos bundles (Leaflet embutido)
+- `overrides.py` — ajustes manuais de polo (usados por `tri2024b.py` e `build_2t.py`)
+- `apply_overrides.py` — aplica `overrides.py` direto nos artefatos publicados (HTML, CSVs, gpkg do 2T) sem rodar o pipeline
 - `poles.py` — heurística partidária anterior (não usada mais; mantida para referência)
 - `_old/` — PNGs de versões anteriores da paleta
