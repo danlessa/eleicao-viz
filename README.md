@@ -29,7 +29,8 @@ deputado federal e estadual; seletor de cargo). Modos: Voronoi (área geográfic
   `overrides.py`.
   Presidente tem ainda a comparação com 2022 (1º turno): variação, em pontos percentuais dos válidos, de Lula, do lado
   Bolsonaro (Flávio 2026 vs. Jair 2022) e da margem entre os dois, por local (casado por município/zona/número com
-  endereço a ≤300 m, ou pelo local de 2022 mais próximo a ≤150 m); vermelho = deslocamento para o lado de Lula.
+  endereço a ≤300 m, ou pelo local de 2022 mais próximo a ≤150 m); vermelho = deslocamento para o lado de Lula. Há também a variação em número de votos
+  (só em locais com todas as seções apuradas), com opção de círculos ∝ |variação|.
 - **Ajustes manuais** (`scripts/overrides.py`) — onde a correlação rotula mal um candidato, o polo é fixado à mão:
   São Caetano (PODE outlier, PL ~Bolsonaro), Itapevi (PSB ~Lula, PODE outlier), Taboão da Serra (PSDB ~Lula,
   PODE outlier, UNIÃO ~Bolsonaro), Diadema (MDB outlier), Mauá (PT ~Lula). No 2T: Mauá PT vermelho, Taboão UNIÃO azul.
