@@ -2,7 +2,7 @@
 
 Mapa interativo: https://storage.googleapis.com/eleicao-viz/rmsp_eleicoes_2022_2024_locais.html (auto-contido, ~30 MB,
 ~5 MB com gzip; hospedado no GCS por `scripts/publish_gcs.sh`; no repositório, `rmsp_eleicoes_2022_2024_locais.html` e
-`index.html` só redirecionam para lá, para não inchar o histórico do git). Eleições (seletor): presidente 2º turno 2006, 2010, 2014, 2018 e 2022, prefeito 2024
+`index.html` só o exibem num iframe, para não inchar o histórico do git). Link: https://abiru.to/eleicao-viz/ Eleições (seletor): presidente 2º turno 2006, 2010, 2014, 2018 e 2022, prefeito 2024
 1º turno, prefeito 2024 2º turno (7 municípios), eleições gerais 2026 1º turno (presidente, governador, senador,
 deputado federal e estadual; seletor de cargo). Modos: Voronoi (área geográfica) ou círculos
 (área ∝ votos) com escala, relaxação por colisão (Dorling) no navegador e opacidade; mapas-base OSM e rmsampa-v2.

@@ -4,8 +4,8 @@ Electoral maps of the São Paulo metro area (RMSP) by polling place: president 2
 mayor 2024 1st and 2nd rounds, general election 2026 1st round (five offices, one tab with a cargo selector). The deliverable is the self-contained `rmsp_eleicoes_2022_2024_locais.html` (~30 MB,
 Leaflet and all data inlined; filename kept for link stability). It is hosted on GCS (bucket `gs://eleicao-viz`, project
 `danlessa`, uploaded gzip-encoded by `scripts/publish_gcs.sh`), not in git: the repo's copy of that file and `index.html`
-are redirect stubs to https://storage.googleapis.com/eleicao-viz/rmsp_eleicoes_2022_2024_locais.html (GitHub Pages keeps
-serving the stubs, so old links work). Get the full file with `curl --compressed -O <that URL>`. See README.md (Portuguese) for color conventions,
+are full-page iframes of https://storage.googleapis.com/eleicao-viz/rmsp_eleicoes_2022_2024_locais.html, so the public
+link stays https://abiru.to/eleicao-viz/ (GitHub Pages, custom domain) and old links keep working. Get the full file with `curl --compressed -O <that URL>`. See README.md (Portuguese) for color conventions,
 data sources and the pipeline order.
 
 ## Working on this repo
