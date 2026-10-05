@@ -19,8 +19,9 @@ deputado federal e estadual; seletor de cargo). Modos: Voronoi (área geográfic
   (1º/2º/3º colocado no município) em escala sequencial única, com opção de círculos ∝ votos do candidato.
 - **2026 1T** — majoritários: os 3 mais votados na RMSP, polos pela correlação (entre locais) da fração de cada um com
   a fração de Lula 2026 no mesmo local (laranja = mais correlato, verde-azulado = menos, roxo = intermediário); se os 2
-  primeiros somam ≥85% dos válidos, escala bipolar entre eles (mesma paleta OKLab do 2024 1T). Presidente usa a escala
-  vermelho/azul dos 2º turnos (vermelho = Lula, azul = Flávio Bolsonaro, fração de Lula entre os dois, esticada ao p95). Senador: 2 votos por
+  primeiros somam ≥85% dos válidos, escala bipolar entre eles (mesma paleta OKLab do 2024 1T). As disputas de dois
+  (presidente, governador, chapas de senador) usam a escala vermelho/azul dos 2º turnos: vermelho = Lula / Haddad / chapa
+  Tebet + Marina, azul = Flávio Bolsonaro / Tarcísio / chapa Derrite + André do Prado, esticada ao p95. Senador: 2 votos por
   eleitor e cada coligação lança até 2 nomes, então o mapa é bipolar entre as duas chapas (coligações) mais votadas,
   somando os dois candidatos de cada uma; percentuais sobre o total de votos para senador. Também há a visualização por candidato. Deputados: fração dos
   válidos do local por partido/federação (nominais + legenda) ou por candidato (60 mais votados na RMSP), escala

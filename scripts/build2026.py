@@ -126,8 +126,8 @@ for cd, k, label, kind in CARGOS:
             t = np.clip((w[:, pi] - 0.25) / 0.5, 0, 1)[:, None]
             lab = np.where(t >= 0.5, E[pi] * (2 * (t - 0.5)) + gray * (1 - 2 * (t - 0.5)), E[pj] * (1 - 2 * t) + gray * (2 * t))
         out['color'] = hexs(oklab_to_rgb(lab)); out['triway'] = bool(triway)
-        if cd == 1 and not triway:
-            # president: the 2nd-round maps' red/blue scale (render_two.py) instead of the 1T poles
+        if not triway:
+            # two-way races (and the senate slates): the 2nd-round maps' red/blue scale (render_two.py) instead of the 1T poles
             a, b = sorted(use, key=lambda c: c['pole'])
             va, vb = V[str(a['nr'])], V[str(b['nr'])]; s2 = va + vb
             pct = np.where(s2 > 0, 100 * va / np.maximum(s2, 1), 50.0)
@@ -179,9 +179,9 @@ partial = f'Apuração parcial: {done:,} de {n_total:,} seções da RMSP ({pct_d
 title = 'Eleições gerais 2026 — 1º turno — RMSP'
 note = (partial + 'Majoritários (presidente, governador, senador): os 3 mais votados na RMSP, com polos pela correlação (Pearson, entre '
         'locais) da fração de cada um com a fração de Lula no mesmo local em 2026: laranja = mais correlato a Lula, verde-azulado = mais '
-        'correlato ao polo oposto, roxo = intermediário; se os 2 primeiros somam ≥85% dos válidos, escala bipolar entre eles. Presidente: '
-        'como nos mapas de 2º turno, vermelho = Lula, azul = Flávio Bolsonaro, fração de Lula entre os dois, escala ajustada ao '
-        'percentil 95 dos locais. Senador: '
+        'correlato ao polo oposto, roxo = intermediário; se os 2 primeiros somam ≥85% dos válidos, escala bipolar entre eles. Disputas de dois '
+        '(presidente, governador, chapas de senador) usam a escala dos mapas de 2º turno: vermelho = o lado mais correlato a Lula, '
+        'azul = o outro, fração entre os dois, escala ajustada ao percentil 95 dos locais. Senador: '
         'cada eleitor votou em 2 nomes, então o mapa compara as duas chapas (coligações) mais votadas, somando os votos dos '
         'dois candidatos de cada uma; percentuais sobre o total de votos válidos para senador. Deputados: fração dos votos válidos do local '
         '(nominais + legenda) do candidato ou do partido. Fontes: TSE, boletins de urna por seção (resultados.tse.jus.br); locais de votação '
