@@ -29,7 +29,8 @@ data sources and the pipeline order.
 - 2026 comes from the live results site, not dados abertos: `scrape_bu2026.py` fetches each RMSP section's `.bu`
   (pleito 3220; per-section files appear ~1h after the section is received, and mirrors can 404 briefly),
   `parse_bu2026.py` decodes the BER by field position (no spec file needed), `build2026.py` builds `bundle_2026.json`.
-  Work dir `work2026/` is gitignored; `scripts/refresh2026.sh` runs the whole chain. `bundle_2026.json` has no per-feature
+  Work dir `work2026/` is gitignored; `scripts/refresh2026.sh` runs the whole chain once;
+  `scripts/live2026.sh` scrapes continuously and republishes to GCS every 10 min (touch `work2026/STOP` to end it). `bundle_2026.json` has no per-feature
   colors: `cargos[k].V[key][i]` are vote columns aligned with `props` (`key` = candidate number, `p<party>`, `f<federation>`),
   and the template computes colors per cargo/view. Coordinates come from TSE's `eleitorado_local_votacao_2026` (has lat/long).
 - No Python env is checked in. Use `uv run --no-project --with geopandas --with pyogrio --with matplotlib --with scipy python …`.

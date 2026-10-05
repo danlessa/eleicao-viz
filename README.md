@@ -58,7 +58,7 @@ deputado federal e estadual; seletor de cargo). Modos: Voronoi (área geográfic
 5. `render2.py 2024`, `render_two.py 2006|2010|2014|2018|2022|2024_2T` — PNGs estáticos + bundles JSON
    `scrape_bu2026.py`, `parse_bu2026.py`, `build2026.py` — 2026 1T: baixa os boletins da RMSP (re-executável; pega os
    que faltam), decodifica para uma tabela por seção e monta `bundle_2026.json`; `refresh2026.sh` roda tudo e o
-   `combine.py` em sequência (pasta de trabalho `work2026/`, fora do git)
+   `combine.py` em sequência, `live2026.sh` baixa sem parar e publica no GCS a cada 10 min (pasta de trabalho `work2026/`, fora do git)
 6. `combine.py` — monta o HTML único a partir de `tpl3.html` e dos bundles (Leaflet 1.9.4 de `package/dist/`, embutido)
 - `overrides.py` — ajustes manuais de polo (usados por `tri2024b.py` e `build_2t.py`)
 - `apply_overrides.py` — aplica `overrides.py` direto nos artefatos publicados (HTML, CSVs, gpkg do 2T) sem rodar o pipeline
