@@ -27,6 +27,9 @@ deputado federal e estadual; seletor de cargo). Modos: Voronoi (área geográfic
   válidos do local por partido/federação (nominais + legenda) ou por candidato (60 mais votados na RMSP), escala
   sequencial esticada ao p95. Ajustes manuais de polo: chaves `2026_presidente`, `2026_governador`, `2026_senador` em
   `overrides.py`.
+  Presidente tem ainda a comparação com 2022 (1º turno): variação, em pontos percentuais dos válidos, de Lula, do lado
+  Bolsonaro (Flávio 2026 vs. Jair 2022) e da margem entre os dois, por local (casado por município/zona/número com
+  endereço a ≤300 m, ou pelo local de 2022 mais próximo a ≤150 m); vermelho = deslocamento para o lado de Lula.
 - **Ajustes manuais** (`scripts/overrides.py`) — onde a correlação rotula mal um candidato, o polo é fixado à mão:
   São Caetano (PODE outlier, PL ~Bolsonaro), Itapevi (PSB ~Lula, PODE outlier), Taboão da Serra (PSDB ~Lula,
   PODE outlier, UNIÃO ~Bolsonaro), Diadema (MDB outlier), Mauá (PT ~Lula). No 2T: Mauá PT vermelho, Taboão UNIÃO azul.
@@ -35,6 +38,9 @@ deputado federal e estadual; seletor de cargo). Modos: Voronoi (área geográfic
 - `data/pres2t_sp.csv.gz` — TSE votação por seção 2022, SP, presidente 2º turno
 - `data/pres2t_rmsp_{2006,2010,2014,2018}.csv.gz` — TSE votação por seção, presidente 2º turno, RMSP (recortados do
   arquivo `votacao_secao_ANO_BR.zip`; o arquivo `_SP` não traz presidente)
+- `data/pres1t_rmsp_2022.csv.gz` — presidente 1º turno 2022 por seção, RMSP (Base dos Dados,
+  `br_tse_eleicoes.resultados_candidato_secao`, porque o arquivo `votacao_secao_2022_BR` do TSE estava bloqueando
+  downloads; número do local de votação vindo do arquivo do 2º turno)
 - `data/prefeito_1t_rmsp_2024.csv.gz`, `data/prefeito_2t_rmsp_2024.csv.gz` — TSE votação por seção 2024, prefeito, RMSP
 - `data/corr_2024_1t.csv`, `data/corr_2024_2t.csv` — r de cada candidato vs. Lula 2022, por município
 - `data/rmsp_prefeito_2024_1T_polos_por_municipio.csv` / `_por_local.csv` — atribuição de polos e cores

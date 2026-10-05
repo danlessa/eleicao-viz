@@ -32,7 +32,9 @@ data sources and the pipeline order.
   Work dir `work2026/` is gitignored; `scripts/refresh2026.sh` runs the whole chain once;
   `scripts/live2026.sh` scrapes continuously and republishes to GCS every 10 min (touch `work2026/STOP` to end it). `bundle_2026.json` has no per-feature
   colors: `cargos[k].V[key][i]` are vote columns aligned with `props` (`key` = candidate number, `p<party>`, `f<federation>`),
-  and the template computes colors per cargo/view. Coordinates come from TSE's `eleitorado_local_votacao_2026` (has lat/long).
+  and the template computes colors per cargo/view. Presidente also carries `prev` (2022 1T Lula/Bolsonaro/válidos per
+  2026 point, from `data/pres1t_rmsp_2022.csv.gz`) for the `d:L`/`d:B`/`d:M` change views. The TSE `_SP` 2022 file has
+  no president; the `_BR` one answered 429, so that extract came from Base dos Dados via `bq` (project `danlessa`). Coordinates come from TSE's `eleitorado_local_votacao_2026` (has lat/long).
 - No Python env is checked in. Use `uv run --no-project --with geopandas --with pyogrio --with matplotlib --with scipy python …`.
 - When rewriting CSVs with pandas, read with `float_precision='round_trip'` and keep nullable int columns
   (`NR_VOTAVEL_*`) as `str`, or every row's diff churns.
