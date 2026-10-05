@@ -30,7 +30,9 @@ deputado federal e estadual; seletor de cargo). Modos: Voronoi (área geográfic
   Presidente tem ainda a comparação com 2022 (1º turno): variação, em pontos percentuais dos válidos, de Lula, do lado
   Bolsonaro (Flávio 2026 vs. Jair 2022) e da margem entre os dois, por local (casado por município/zona/número com
   endereço a ≤300 m, ou pelo local de 2022 mais próximo a ≤150 m); vermelho = deslocamento para o lado de Lula. Há também a variação em número de votos
-  (só em locais com todas as seções apuradas), com opção de círculos ∝ |variação|.
+  (só em locais com todas as seções apuradas), com opção de círculos ∝ |variação|. E a abstenção: % dos aptos com
+  abstenção e com abstenção + brancos + nulos + outros candidatos (tudo que não foi para Lula ou Flávio), e a variação
+  dessas duas contagens vs. 2022 em número de pessoas (verde = menos, roxo = mais).
 - **Ajustes manuais** (`scripts/overrides.py`) — onde a correlação rotula mal um candidato, o polo é fixado à mão:
   São Caetano (PODE outlier, PL ~Bolsonaro), Itapevi (PSB ~Lula, PODE outlier), Taboão da Serra (PSDB ~Lula,
   PODE outlier, UNIÃO ~Bolsonaro), Diadema (MDB outlier), Mauá (PT ~Lula). No 2T: Mauá PT vermelho, Taboão UNIÃO azul.
@@ -42,6 +44,8 @@ deputado federal e estadual; seletor de cargo). Modos: Voronoi (área geográfic
 - `data/pres1t_rmsp_2022.csv.gz` — presidente 1º turno 2022 por seção, RMSP (Base dos Dados,
   `br_tse_eleicoes.resultados_candidato_secao`, porque o arquivo `votacao_secao_2022_BR` do TSE estava bloqueando
   downloads; número do local de votação vindo do arquivo do 2º turno)
+- `data/pres1t_rmsp_2022_detalhes.csv.gz` — 2022 1º turno, presidente: aptos, comparecimento, brancos e nulos por seção
+  (Base dos Dados, `br_tse_eleicoes.detalhes_votacao_secao`)
 - `data/prefeito_1t_rmsp_2024.csv.gz`, `data/prefeito_2t_rmsp_2024.csv.gz` — TSE votação por seção 2024, prefeito, RMSP
 - `data/corr_2024_1t.csv`, `data/corr_2024_2t.csv` — r de cada candidato vs. Lula 2022, por município
 - `data/rmsp_prefeito_2024_1T_polos_por_municipio.csv` / `_por_local.csv` — atribuição de polos e cores

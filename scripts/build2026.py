@@ -2,7 +2,7 @@
 # usage: python build2026.py   (cwd needs votos_secao_rmsp_2026.csv.gz from parse_bu2026.py, sp-cs.json,
 #   eleitorado_local_votacao_2026_SP.csv, consulta_cand_2026_{BR,SP}.csv, tse2ibge.json, geojs-35-mun.json,
 #   rmsp_prefeito_2024_1T_locais.csv + rmsp_presidente_2022_2T_locais_raw.csv (fallback coordinates; 2022 locais),
-#   pres1t_rmsp_2022.csv.gz (2022 1st round, for the presidente comparison views), agg.py, tri2024.py, overrides.py)
+#   pres1t_rmsp_2022.csv.gz + pres1t_rmsp_2022_detalhes.csv.gz (2022 1st round, for the presidente comparison views), agg.py, tri2024.py, overrides.py)
 import json, re, numpy as np, pandas as pd, geopandas as gpd
 from shapely.ops import voronoi_diagram, unary_union
 from overrides import assign_poles
@@ -30,6 +30,7 @@ cs = json.load(open('sp-cs.json'))
 n_total = sum(len(z['sec']) - sum(len(s.get('nsa', [])) for s in z['sec']) for mu in cs['abr'][0]['mu'] if int(mu['cd']) in T2I for z in mu['zon'])
 n_sec = sec[sec.CD_ELEICAO == 6257].groupby(key).NR_SECAO.nunique().rename('n_secoes')
 comp = sec[sec.CD_ELEICAO == 6257].groupby(key).QT_COMPARECIMENTO.sum().rename('total')
+aptos = sec[sec.CD_ELEICAO == 6257].groupby(key).QT_APTOS.sum().rename('aptos')
 print('sections parsed', int(n_sec.sum()), 'of', n_total)
 
 # --- polling places: TSE 2026 coordinates, 2024 geocoded ones where TSE has none ---
@@ -43,7 +44,7 @@ fb = loc[bad].drop(columns=['long', 'lat']).merge(l24, on=key, how='left')
 loc.loc[bad, ['long', 'lat']] = fb[['long', 'lat']].values
 print('locais', len(loc), 'without TSE coords', int(bad.sum()), '-> still missing', int(loc.lat.isna().sum()))
 loc['cod_localidade_ibge'] = loc.CD_MUNICIPIO.map(T2I); loc['municipio'] = loc.cod_localidade_ibge.map(RMSP)
-loc = loc.merge(n_sec, on=key, how='left').merge(comp, on=key, how='left').fillna({'n_secoes': 0, 'total': 0})
+loc = loc.merge(n_sec, on=key, how='left').merge(comp, on=key, how='left').merge(aptos, on=key, how='left').fillna({'n_secoes': 0, 'total': 0, 'aptos': 0})
 lost = loc[loc.lat.isna()]
 print('votes at locais without coordinates:', int(lost.total.sum()), f'({100 * lost.total.sum() / max(1, loc.total.sum()):.3f}%)')
 loc = loc.dropna(subset=['lat'])
@@ -56,7 +57,7 @@ pts = loc.groupby('pt').agg(cod_localidade_ibge=('cod_localidade_ibge', 'first')
                             lat=('lat_r', 'first'), NR_ZONA=('NR_ZONA', J('/')), NR_LOCAL_VOTACAO=('NR_LOCAL_VOTACAO', J('/')),
                             NM_LOCAL_VOTACAO=('NM_LOCAL_VOTACAO', J(' | ')), DS_LOCAL_VOTACAO_ENDERECO=('DS_LOCAL_VOTACAO_ENDERECO', 'first'),
                             ds_bairro=('ds_bairro', 'first'), n_secoes=('n_secoes', 'sum'), n_secoes_tot=('n_secoes_tot', 'sum'),
-                            total=('total', 'sum'), n_locais=('NR_LOCAL_VOTACAO', 'size')).reset_index()
+                            total=('total', 'sum'), aptos=('aptos', 'sum'), n_locais=('NR_LOCAL_VOTACAO', 'size')).reset_index()
 allpts = pts.copy()
 pts = pts[pts.n_secoes > 0].reset_index(drop=True)  # nothing counted there yet
 N = len(pts); idx = dict(zip(pts.pt, pts.index))
@@ -81,6 +82,8 @@ def prev_2022():
     p22 = pd.read_csv('pres1t_rmsp_2022.csv.gz', sep=';')
     g = p22.pivot_table(index=key, columns='NR_VOTAVEL', values='QT_VOTOS', aggfunc='sum', fill_value=0)
     l22 = pd.DataFrame({'lula': g[13], 'bolso': g[22], 'validos': g.sum(axis=1)}).reset_index()
+    det = pd.read_csv('pres1t_rmsp_2022_detalhes.csv.gz', sep=';').groupby(key)[['QT_APTOS', 'QT_COMPARECIMENTO', 'QT_BRANCOS', 'QT_NULOS']].sum()
+    l22 = l22.merge(det.rename(columns={'QT_APTOS': 'aptos', 'QT_COMPARECIMENTO': 'comp', 'QT_BRANCOS': 'branco', 'QT_NULOS': 'nulo'}).reset_index(), on=key, how='left').fillna(0)
     xy22 = pd.read_csv('rmsp_presidente_2022_2T_locais_raw.csv')[key + ['long', 'lat']].dropna().drop_duplicates(key)
     l22 = l22.merge(xy22, on=key, how='left').merge(loc[key + ['pt', 'long', 'lat']].rename(columns={'long': 'x26', 'lat': 'y26'}), on=key, how='left')
     m = lambda dx, dy, y: np.hypot(dx * 111320 * np.cos(np.radians(y)), dy * 110540)
@@ -96,7 +99,7 @@ def prev_2022():
     print('2022 1T locais', len(l22), 'by key', int(ok.sum()), 'by distance', int(near.sum()), 'unmatched', int(l22.pt2.isna().sum()),
           f"({100 * l22[l22.pt2.isna()].validos.sum() / l22.validos.sum():.1f}% of votes)")
     out = {}
-    for c in ('lula', 'bolso', 'validos'):
+    for c in ('lula', 'bolso', 'validos', 'aptos', 'comp', 'branco', 'nulo'):
         a = np.zeros(N, dtype=int); s = l22.dropna(subset=['i']).groupby('i')[c].sum(); a[s.index.astype(int)] = s.values; out[c] = a.tolist()
     return out
 
@@ -209,7 +212,7 @@ gj = rnd(json.loads(vor[['i', 'geometry']].to_json(drop_id=True)))
 area = mun_p.area.sum(); r = np.sqrt(pts.total.values / pts.total.sum() * area * 0.3 / np.pi)
 P4 = P.to_crs(4326); dor = [[round(y, 5), round(x, 5), int(rr)] for x, y, rr in zip(P4.geometry.x, P4.geometry.y, r)]
 ren = {'NM_LOCAL_VOTACAO': 'nome', 'DS_LOCAL_VOTACAO_ENDERECO': 'end', 'NR_ZONA': 'zona', 'NR_LOCAL_VOTACAO': 'nr', 'ds_bairro': 'bairro', 'municipio': 'mun'}
-props = json.loads(pts.reset_index().rename(columns=ren | {'index': 'i'})[['i', 'mun', 'zona', 'nr', 'nome', 'end', 'bairro', 'n_secoes', 'n_secoes_tot', 'n_locais', 'total']].to_json(orient='records'))
+props = json.loads(pts.reset_index().rename(columns=ren | {'index': 'i'})[['i', 'mun', 'zona', 'nr', 'nome', 'end', 'bairro', 'n_secoes', 'n_secoes_tot', 'n_locais', 'total', 'aptos']].to_json(orient='records'))
 
 # --- text ---
 done = int(pts.n_secoes.sum())
