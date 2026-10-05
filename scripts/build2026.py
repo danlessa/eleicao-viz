@@ -1,7 +1,8 @@
 # 2026 1st round (presidente, governador, senador, deputado federal/estadual) by polling place -> bundle_2026.json
 # usage: python build2026.py   (cwd needs votos_secao_rmsp_2026.csv.gz from parse_bu2026.py, sp-cs.json,
 #   eleitorado_local_votacao_2026_SP.csv, consulta_cand_2026_{BR,SP}.csv, tse2ibge.json, geojs-35-mun.json,
-#   rmsp_prefeito_2024_1T_locais.csv + rmsp_presidente_2022_2T_locais_raw.csv (fallback coordinates), agg.py, tri2024.py, overrides.py)
+#   rmsp_prefeito_2024_1T_locais.csv + rmsp_presidente_2022_2T_locais_raw.csv (fallback coordinates; 2022 locais),
+#   pres1t_rmsp_2022.csv.gz (2022 1st round, for the presidente comparison views), agg.py, tri2024.py, overrides.py)
 import json, re, numpy as np, pandas as pd, geopandas as gpd
 from shapely.ops import voronoi_diagram, unary_union
 from overrides import assign_poles
@@ -48,6 +49,7 @@ pts = loc.groupby('pt').agg(cod_localidade_ibge=('cod_localidade_ibge', 'first')
                             NM_LOCAL_VOTACAO=('NM_LOCAL_VOTACAO', J(' | ')), DS_LOCAL_VOTACAO_ENDERECO=('DS_LOCAL_VOTACAO_ENDERECO', 'first'),
                             ds_bairro=('ds_bairro', 'first'), n_secoes=('n_secoes', 'sum'), n_secoes_tot=('n_secoes_tot', 'sum'),
                             total=('total', 'sum'), n_locais=('NR_LOCAL_VOTACAO', 'size')).reset_index()
+allpts = pts.copy()
 pts = pts[pts.n_secoes > 0].reset_index(drop=True)  # nothing counted there yet
 N = len(pts); idx = dict(zip(pts.pt, pts.index))
 v = v.merge(loc[key + ['pt']], on=key, how='inner'); v['i'] = v.pt.map(idx); v = v.dropna(subset=['i']); v['i'] = v.i.astype(int)
@@ -62,6 +64,33 @@ PARTY = cand.drop_duplicates('NR_PARTIDO').set_index('NR_PARTIDO').SG_PARTIDO.to
 fed = cand[cand.NR_FEDERACAO > 0].drop_duplicates('NR_PARTIDO')
 FEDNR = dict(zip(fed.NR_PARTIDO, fed.NR_FEDERACAO))
 FEDNM = {r.NR_FEDERACAO: re.sub(r'\d+-', '', r.DS_COMPOSICAO_FEDERACAO) for r in fed.itertuples()}  # '13-PT/65-PC do B/43-PV' -> 'PT/PC do B/PV'
+
+def prev_2022():
+    # 2022 1st round (data/pres1t_rmsp_2022.csv.gz: Base dos Dados per-section results + local numbers from the 2T file)
+    # onto the 2026 points: same municipality/zone/local number if the 2022 address is within 300 m of the 2026 one,
+    # else the nearest 2026 point in the same municipality within 150 m
+    from scipy.spatial import cKDTree
+    p22 = pd.read_csv('pres1t_rmsp_2022.csv.gz', sep=';')
+    g = p22.pivot_table(index=key, columns='NR_VOTAVEL', values='QT_VOTOS', aggfunc='sum', fill_value=0)
+    l22 = pd.DataFrame({'lula': g[13], 'bolso': g[22], 'validos': g.sum(1)}).reset_index()
+    xy22 = pd.read_csv('rmsp_presidente_2022_2T_locais_raw.csv')[key + ['long', 'lat']].dropna().drop_duplicates(key)
+    l22 = l22.merge(xy22, on=key, how='left').merge(loc[key + ['pt', 'long', 'lat']].rename(columns={'long': 'x26', 'lat': 'y26'}), on=key, how='left')
+    m = lambda dx, dy, y: np.hypot(dx * 111320 * np.cos(np.radians(y)), dy * 110540)
+    d = m(l22.long - l22.x26, l22.lat - l22.y26, l22.lat)
+    ok = l22.pt.notna() & (d <= 300)
+    ap = allpts.reset_index(drop=True); kx = np.c_[ap.long * np.cos(np.radians(-23.6)), ap.lat]
+    tree = cKDTree(kx); rest = ~ok & l22.long.notna()
+    dist, j = tree.query(np.c_[l22.long[rest] * np.cos(np.radians(-23.6)), l22.lat[rest]])
+    same = ap.cod_localidade_ibge.values[j] == l22.CD_MUNICIPIO[rest].map(T2I).values
+    near = same & (dist * 110540 <= 150)
+    l22.loc[ok, 'pt2'] = l22.pt[ok]; l22.loc[l22.index[rest][near], 'pt2'] = ap.pt.values[j][near]
+    l22['i'] = l22.pt2.map(idx)
+    print('2022 1T locais', len(l22), 'by key', int(ok.sum()), 'by distance', int(near.sum()), 'unmatched', int(l22.pt2.isna().sum()),
+          f"({100 * l22[l22.pt2.isna()].validos.sum() / l22.validos.sum():.1f}% of votes)")
+    out = {}
+    for c in ('lula', 'bolso', 'validos'):
+        a = np.zeros(N, dtype=int); s = l22.dropna(subset=['i']).groupby('i')[c].sum(); a[s.index.astype(int)] = s.values; out[c] = a.tolist()
+    return out
 
 def col(sub, nr):
     a = np.zeros(N, dtype=int); g = sub[sub.NR_VOTAVEL == nr].groupby('i').QT_VOTOS.sum(); a[g.index] = g.values; return a
@@ -98,6 +127,7 @@ for cd, k, label, kind in CARGOS:
         out['parties'] = sorted(parties, key=lambda d: -d['v'])
     if cd == 1:
         lula = V['13'] / np.maximum(validos, 1)
+        out['prev'] = prev_2022(); out['lulaNr'] = 13; out['bolsoNr'] = 22
     if kind == 'maj':
         # ternary: top 3 in the RMSP; poles from each one's correlation (between polling places) with Lula's 2026 share
         ok = validos > 0
