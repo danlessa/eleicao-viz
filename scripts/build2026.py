@@ -16,21 +16,29 @@ NTOP = 60  # candidates offered per proportional office
 
 # --- votes ---
 v = pd.read_csv('votos_secao_rmsp_2026.csv.gz', sep=';', dtype={'NR_PARTIDO': 'Int64'})
+e = pd.read_csv('eleitorado_local_votacao_2026_SP.csv', sep=';', encoding='latin1', decimal=',')
+e = e[e.CD_MUNICIPIO.isin(T2I)]
+# a .bu carries the polling place its machine was configured for; TSE's polling-place file has where the section
+# actually voted (last-minute moves keep the old number in NR_LOCAL_VOTACAO_ORIGINAL), so take the place from there
+s2l = e.drop_duplicates(['CD_MUNICIPIO', 'NR_ZONA', 'NR_SECAO']).set_index(['CD_MUNICIPIO', 'NR_ZONA', 'NR_SECAO']).NR_LOCAL_VOTACAO
+moved = s2l.reindex(pd.MultiIndex.from_frame(v[['CD_MUNICIPIO', 'NR_ZONA', 'NR_SECAO']])).values
+print('sections moved to another polling place:', v[(moved == moved) & (moved != v.NR_LOCAL_VOTACAO.values)].drop_duplicates(['CD_MUNICIPIO', 'NR_ZONA', 'NR_SECAO']).shape[0])
+v['NR_LOCAL_VOTACAO'] = np.where(moved == moved, moved, v.NR_LOCAL_VOTACAO).astype(int)
 sec = v.drop_duplicates(key + ['NR_SECAO', 'CD_ELEICAO'])
 cs = json.load(open('sp-cs.json'))
-n_total = sum(len(z['sec']) for mu in cs['abr'][0]['mu'] if int(mu['cd']) in T2I for z in mu['zon'])
+# sections merged into another one ('nsa') never get a report of their own
+n_total = sum(len(z['sec']) - sum(len(s.get('nsa', [])) for s in z['sec']) for mu in cs['abr'][0]['mu'] if int(mu['cd']) in T2I for z in mu['zon'])
 n_sec = sec[sec.CD_ELEICAO == 6257].groupby(key).NR_SECAO.nunique().rename('n_secoes')
 comp = sec[sec.CD_ELEICAO == 6257].groupby(key).QT_COMPARECIMENTO.sum().rename('total')
 print('sections parsed', int(n_sec.sum()), 'of', n_total)
 
 # --- polling places: TSE 2026 coordinates, 2024 geocoded ones where TSE has none ---
-e = pd.read_csv('eleitorado_local_votacao_2026_SP.csv', sep=';', encoding='latin1', decimal=',')
-e = e[e.CD_MUNICIPIO.isin(T2I)]
 loc = e.groupby(key).agg(lat=('NR_LATITUDE', 'first'), long=('NR_LONGITUDE', 'first'), NM_LOCAL_VOTACAO=('NM_LOCAL_VOTACAO', 'first'),
                          DS_LOCAL_VOTACAO_ENDERECO=('DS_ENDERECO', 'first'), ds_bairro=('NM_BAIRRO', 'first'),
                          n_secoes_tot=('NR_SECAO', 'size')).reset_index()
 bad = loc.lat.isna() | (loc.lat == -1)
-l24 = pd.concat([pd.read_csv(f)[key + ['long', 'lat']].dropna() for f in ('rmsp_prefeito_2024_1T_locais.csv', 'rmsp_presidente_2022_2T_locais_raw.csv')]).drop_duplicates(key)
+# fallbacks in order: 2024 and 2022 geocoded places, then data/locais_2026_geocode.csv (Nominatim, for new places)
+l24 = pd.concat([pd.read_csv(f)[key + ['long', 'lat']].dropna() for f in ('rmsp_prefeito_2024_1T_locais.csv', 'rmsp_presidente_2022_2T_locais_raw.csv', 'locais_2026_geocode.csv')]).drop_duplicates(key)
 fb = loc[bad].drop(columns=['long', 'lat']).merge(l24, on=key, how='left')
 loc.loc[bad, ['long', 'lat']] = fb[['long', 'lat']].values
 print('locais', len(loc), 'without TSE coords', int(bad.sum()), '-> still missing', int(loc.lat.isna().sum()))
@@ -72,7 +80,7 @@ def prev_2022():
     from scipy.spatial import cKDTree
     p22 = pd.read_csv('pres1t_rmsp_2022.csv.gz', sep=';')
     g = p22.pivot_table(index=key, columns='NR_VOTAVEL', values='QT_VOTOS', aggfunc='sum', fill_value=0)
-    l22 = pd.DataFrame({'lula': g[13], 'bolso': g[22], 'validos': g.sum(1)}).reset_index()
+    l22 = pd.DataFrame({'lula': g[13], 'bolso': g[22], 'validos': g.sum(axis=1)}).reset_index()
     xy22 = pd.read_csv('rmsp_presidente_2022_2T_locais_raw.csv')[key + ['long', 'lat']].dropna().drop_duplicates(key)
     l22 = l22.merge(xy22, on=key, how='left').merge(loc[key + ['pt', 'long', 'lat']].rename(columns={'long': 'x26', 'lat': 'y26'}), on=key, how='left')
     m = lambda dx, dy, y: np.hypot(dx * 111320 * np.cos(np.radians(y)), dy * 110540)
@@ -183,7 +191,9 @@ mun = gpd.read_file('geojs-35-mun.json'); mun['id'] = mun.id.astype(int); mun = 
 crs = 31983; P = gpd.GeoDataFrame(pts, geometry=gpd.points_from_xy(pts.long, pts.lat), crs=4326).to_crs(crs); mun_p = mun.to_crs(crs)
 mun_geom = dict(zip(mun_p.id, mun_p.geometry)); cells = []
 inside = np.array([mun_geom[int(m)].contains(g) for m, g in zip(P.cod_localidade_ibge, P.geometry)])
-print('points outside their own municipality:', int((~inside).sum()))
+print('points outside their own municipality (moved 20 m inside it):', int((~inside).sum()))
+from shapely.ops import nearest_points  # TSE coordinates a few metres to ~200 m past the IBGE border; keep each point in its own municipality
+P.loc[~inside, 'geometry'] = [nearest_points(mun_geom[int(m)].buffer(-20), g)[0] for m, g in zip(P.cod_localidade_ibge[~inside], P.geometry[~inside])]
 for mid, grp in P.groupby('cod_localidade_ibge'):
     poly = mun_geom[int(mid)]; vd = voronoi_diagram(unary_union(grp.geometry.values), envelope=poly.buffer(5000))
     ix = gpd.GeoDataFrame(geometry=list(vd.geoms), crs=crs); j = gpd.sjoin(ix, grp[['geometry']], predicate='contains', how='inner')
@@ -204,8 +214,9 @@ props = json.loads(pts.reset_index().rename(columns=ren | {'index': 'i'})[['i', 
 # --- text ---
 done = int(pts.n_secoes.sum())
 pct_done = 100 * done / n_total
-ts = f"{cs['dg']} {cs['hg']}"
-partial = f'Apuração parcial: {done:,} de {n_total:,} seções da RMSP ({pct_done:.1f}%), boletins publicados até {ts}. '.replace(',', '.') if done < n_total else ''
+from datetime import datetime
+ts = datetime.now().strftime('%d/%m/%Y %H:%M')
+partial = f'Apuração parcial: {done:,} de {n_total:,} seções da RMSP ({pct_done:.1f}%), atualizado em {ts}. '.replace(',', '.') if done < n_total else ''
 title = 'Eleições gerais 2026 — 1º turno — RMSP'
 note = (partial + 'Majoritários (presidente, governador, senador): os 3 mais votados na RMSP, com polos pela correlação (Pearson, entre '
         'locais) da fração de cada um com a fração de Lula no mesmo local em 2026: laranja = mais correlato a Lula, verde-azulado = mais '

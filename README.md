@@ -48,7 +48,9 @@ deputado federal e estadual; seletor de cargo). Modos: Voronoi (área geográfic
 - `data/geojs-35-mun.json` — limites municipais SP (IBGE via tbrugz/geodata-br)
 - 2026: boletins de urna por seção (`.bu`, ASN.1) do site de resultados do TSE (`resultados.tse.jus.br/oficial/ele2026/
   arquivo-urna/3220/…`), baixados durante a apuração; locais e coordenadas de `eleitorado_local_votacao_2026.zip`
-  (cdn.tse.jus.br, já traz latitude/longitude); nomes de `consulta_cand_2026.zip`. Quando o TSE publicar
+  (cdn.tse.jus.br, já traz latitude/longitude; o local de cada seção vem desse arquivo, porque o boletim traz o local
+  original de seções remanejadas na última hora; locais sem coordenada usam as de 2024/2022 ou `data/locais_2026_geocode.csv`,
+  geocodificado no Nominatim/OSM); nomes de `consulta_cand_2026.zip`. Quando o TSE publicar
   `votacao_secao_2026`, ele substitui os boletins como fonte
 - coordenadas dos locais: fdhidalgo/geocode_br_polling_stations (`geocoded_polling_stations.csv.gz`, 54 MB, não incluído;
   v0.16 para 2006–2018, com as coordenadas de cada ano)
